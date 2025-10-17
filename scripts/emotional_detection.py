@@ -185,6 +185,32 @@ for i in range(len(TARGETS)):
         if f1 > best_f1:
             best_t, best_f1 = t, f1
     best_tau.append(best_t)
+# === 10) Save the model, tokenizer, labels, and thresholds ===
+save_dir = "./emotion-distilbert-v1"
+
+# Nice-to-have: readable labels inside the config
+label2id = {name: i for i, name in enumerate(TARGETS)}
+id2label = {i: name for name, i in label2id.items()}
+model.config.label2id = label2id
+model.config.id2label = id2label
+model.config.problem_type = "multi_label_classification"
+
+# Save weights + config + tokenizer
+model.save_pretrained(save_dir)
+tok.save_pretrained(save_dir)
+
+# Save your tuned thresholds and any metadata you care about
+import json, os, time
+extras = {
+    "best_tau": [float(x) for x in best_tau],
+    "targets": TARGETS,
+    "created_utc": time.time(),
+    "base_model": "distilbert-base-uncased",
+    "notes": "GoEmotions simplified → 7 labels (Ekman+neutral) with per-class thresholds."
+}
+with open(os.path.join(save_dir, "extras.json"), "w", encoding="utf-8") as f:
+    json.dump(extras, f, indent=2)
+print(f"Saved model + tokenizer + extras to: {save_dir}")
 
 # --- 9) Inference
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
